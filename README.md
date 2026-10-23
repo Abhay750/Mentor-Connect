@@ -96,14 +96,32 @@ Undergraduate students frequently face challenges finding timely, personalized a
 
 ## 7. Installation & Setup
 
-> **Pending:** Application code has not yet been scaffolding. Installation, dependency management, and local run instructions will be published once the base application directories and package manifests are committed in Milestone 2.
+### Prerequisites
+- **Node.js**: v20+ recommended (verified on v26.7.0)
+- **npm**: v10+ recommended (verified on v11.19.0)
 
-```bash
-# PENDING MILESTONE 2: Codebase scaffolding and setup instructions will be detailed here.
-# Planned commands:
-# npm install
-# npm run dev
-```
+### Frontend Setup (Verified)
+1. Navigate to the client directory:
+   ```bash
+   cd client
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the Vite development server:
+   ```bash
+   npm run dev
+   ```
+   Open [http://localhost:5173](http://localhost:5173) in your browser to access the Mentor Connect application.
+
+4. Build for production:
+   ```bash
+   npm run build
+   ```
+
+### Backend Setup
+> **Pending:** Backend APIs and services will be initialized in Milestone 2B. Setup and run commands will be added once backend scaffolding is created.
 
 ---
 
