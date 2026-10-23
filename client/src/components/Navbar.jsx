@@ -29,7 +29,7 @@ export default function Navbar({ activeTab, onTabChange }) {
       </nav>
 
       <div className="header-status">
-        <span className="status-badge">Milestone 3B • Profile Details</span>
+        <span className="status-badge">Milestone 3C • Booking Demo</span>
       </div>
     </header>
   );

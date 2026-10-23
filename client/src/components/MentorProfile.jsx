@@ -1,4 +1,10 @@
+import { useState, useRef } from 'react';
+import BookingModal from './BookingModal.jsx';
+
 export default function MentorProfile({ mentor, onBack }) {
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const bookingButtonRef = useRef(null);
+
   // Graceful fallback for invalid or missing mentor
   if (!mentor) {
     return (
@@ -18,6 +24,16 @@ export default function MentorProfile({ mentor, onBack }) {
       </div>
     );
   }
+
+  const handleCloseBookingModal = () => {
+    setIsBookingModalOpen(false);
+    // Return focus to the trigger button for accessibility
+    setTimeout(() => {
+      if (bookingButtonRef.current) {
+        bookingButtonRef.current.focus();
+      }
+    }, 10);
+  };
 
   return (
     <article className="mentor-profile-view" aria-labelledby="profile-heading">
@@ -110,7 +126,7 @@ export default function MentorProfile({ mentor, onBack }) {
           )}
         </div>
 
-        {/* Right Column: Availability & Booking Preview */}
+        {/* Right Column: Availability & Booking Action */}
         <aside className="profile-sidebar-col" aria-label="Availability and scheduling information">
           <div className="profile-availability-card">
             <div className="sidebar-card-header">
@@ -124,9 +140,9 @@ export default function MentorProfile({ mentor, onBack }) {
               <div className="notice-content">
                 <strong>Demonstration Schedule:</strong>
                 <p>
-                  Availability slots shown below are demonstration fixtures for Milestone 3B. Live booking workflows and calendar reservation will be connected in future milestones.
+                  Availability slots shown below are demonstration fixtures for Milestone 3B &amp; 3C. Live booking workflows and database persistence will be connected in future milestones.
                 </p>
-                <span className="mock-disclaimer-pill status-pill">Not Live / Non-Bookable</span>
+                <span className="mock-disclaimer-pill status-pill">Demo Simulation Mode</span>
               </div>
             </div>
 
@@ -135,15 +151,16 @@ export default function MentorProfile({ mentor, onBack }) {
               <p className="slot-time">{mentor.sampleAvailability}</p>
             </div>
 
-            {/* Disabled Action Preview */}
+            {/* Enabled Demo Booking Action Button */}
             <button
+              ref={bookingButtonRef}
               type="button"
-              className="book-session-preview-btn"
-              disabled
-              aria-disabled="true"
-              title="Booking feature will be available in future milestones"
+              className="book-session-action-btn"
+              onClick={() => setIsBookingModalOpen(true)}
+              aria-haspopup="dialog"
+              aria-expanded={isBookingModalOpen}
             >
-              Book Session (Coming in Future Milestones)
+              Request a Demo Session
             </button>
           </div>
 
@@ -167,6 +184,14 @@ export default function MentorProfile({ mentor, onBack }) {
           ← Return to Mentor Discovery
         </button>
       </div>
+
+      {/* Interactive Booking Modal Component */}
+      {isBookingModalOpen && (
+        <BookingModal
+          mentor={mentor}
+          onClose={handleCloseBookingModal}
+        />
+      )}
     </article>
   );
 }

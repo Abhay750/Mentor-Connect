@@ -17,6 +17,18 @@ export const MOCK_CATEGORIES = [
   'Product & Strategy'
 ];
 
+/**
+ * Standardized illustrative demo time slots for Milestone 3C-B.
+ * Slots are illustrative and not live calendar availability.
+ * slot-4 is explicitly configured to demonstrate deterministic conflict handling.
+ */
+export const DEMO_TIME_SLOTS = [
+  { id: 'slot-1', label: '10:00 AM – 11:00 AM IST', isConflictDemo: false },
+  { id: 'slot-2', label: '02:00 PM – 03:00 PM IST', isConflictDemo: false },
+  { id: 'slot-3', label: '04:00 PM – 05:00 PM IST', isConflictDemo: false },
+  { id: 'slot-4', label: '05:30 PM – 06:30 PM IST (Simulated Conflict Slot)', isConflictDemo: true }
+];
+
 export const MOCK_MENTORS = [
   {
     id: 'mentor-1',
