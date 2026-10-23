@@ -1,4 +1,4 @@
-export default function MentorCard({ mentor }) {
+export default function MentorCard({ mentor, onSelectMentor }) {
   return (
     <article className="mentor-card" aria-labelledby={`mentor-name-${mentor.id}`}>
       {/* Card Header */}
@@ -38,6 +38,18 @@ export default function MentorCard({ mentor }) {
           <span className="mock-disclaimer-pill">Demo / Not Bookable</span>
         </div>
         <p className="availability-text">{mentor.sampleAvailability}</p>
+      </div>
+
+      {/* Action Footer */}
+      <div className="card-action-footer">
+        <button
+          type="button"
+          className="view-profile-btn"
+          onClick={() => onSelectMentor(mentor.id)}
+          aria-label={`View detailed profile of ${mentor.name}`}
+        >
+          View Profile <span aria-hidden="true">→</span>
+        </button>
       </div>
     </article>
   );

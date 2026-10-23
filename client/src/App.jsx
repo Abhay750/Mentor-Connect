@@ -5,12 +5,14 @@ import Navbar from './components/Navbar.jsx';
 import SearchBar from './components/SearchBar.jsx';
 import CategoryFilter from './components/CategoryFilter.jsx';
 import MentorCard from './components/MentorCard.jsx';
+import MentorProfile from './components/MentorProfile.jsx';
 import EmptyState from './components/EmptyState.jsx';
 
 function App() {
   const [activeTab, setActiveTab] = useState('discover');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedMentorId, setSelectedMentorId] = useState(null);
 
   // Filter mentors based on search query and selected category
   const filteredMentors = useMemo(() => {
@@ -44,98 +46,124 @@ function App() {
     setSelectedCategory('All');
   };
 
+  // Find currently selected mentor (or null if none/invalid)
+  const selectedMentor = useMemo(() => {
+    if (!selectedMentorId) return null;
+    return MOCK_MENTORS.find((m) => m.id === selectedMentorId) || null;
+  }, [selectedMentorId]);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    if (tab === 'discover') {
+      setSelectedMentorId(null);
+    }
+  };
+
   return (
     <div className="app-container">
       {/* Header and Navigation */}
-      <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
+      <Navbar activeTab={activeTab} onTabChange={handleTabChange} />
 
       <main className="main-content">
         {activeTab === 'discover' ? (
-          <section className="discovery-section" aria-labelledby="discovery-heading">
-            {/* Header intro */}
-            <div className="discovery-hero">
-              <span className="discovery-badge">Mentor Discovery</span>
-              <h1 id="discovery-heading" className="discovery-title">
-                Find Academic &amp; Industry Mentors
-              </h1>
-              <p className="discovery-subtitle">
-                Explore guidance across engineering, design, AI, and career development.
-                Search by name or technical expertise to find the right mentor for your capstone project.
-              </p>
-            </div>
-
-            {/* Search and Filters Control Panel */}
-            <div className="discovery-controls">
-              <SearchBar
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                onClearSearch={() => setSearchQuery('')}
-              />
-
-              <CategoryFilter
-                categories={MOCK_CATEGORIES}
-                selectedCategory={selectedCategory}
-                onSelectCategory={setSelectedCategory}
-              />
-            </div>
-
-            {/* Results count & status bar */}
-            <div className="results-status-bar" aria-live="polite">
-              <span className="results-count">
-                Showing <strong>{filteredMentors.length}</strong> of{' '}
-                {MOCK_MENTORS.length} mentors
-                {selectedCategory !== 'All' && (
-                  <span className="active-filter-badge">
-                    Category: {selectedCategory}
-                  </span>
-                )}
-                {searchQuery.trim() && (
-                  <span className="active-filter-badge">
-                    Query: &ldquo;{searchQuery.trim()}&rdquo;
-                  </span>
-                )}
-              </span>
-
-              {isFiltered && (
-                <button
-                  type="button"
-                  className="clear-all-filters-btn"
-                  onClick={handleResetFilters}
-                >
-                  Clear all filters
-                </button>
-              )}
-            </div>
-
-            {/* Mentor Cards Grid or Empty State */}
-            {filteredMentors.length > 0 ? (
-              <div
-                className="mentors-grid"
-                role="region"
-                aria-label="Mentor search results"
-              >
-                {filteredMentors.map((mentor) => (
-                  <MentorCard key={mentor.id} mentor={mentor} />
-                ))}
+          selectedMentorId ? (
+            /* Detailed Mentor Profile View (Milestone 3B) */
+            <MentorProfile
+              mentor={selectedMentor}
+              onBack={() => setSelectedMentorId(null)}
+            />
+          ) : (
+            /* Mentor Discovery Directory View */
+            <section className="discovery-section" aria-labelledby="discovery-heading">
+              {/* Header intro */}
+              <div className="discovery-hero">
+                <span className="discovery-badge">Mentor Discovery</span>
+                <h1 id="discovery-heading" className="discovery-title">
+                  Find Academic &amp; Industry Mentors
+                </h1>
+                <p className="discovery-subtitle">
+                  Explore guidance across engineering, design, AI, and career development.
+                  Search by name or technical expertise to find the right mentor for your capstone project.
+                </p>
               </div>
-            ) : (
-              <EmptyState
-                searchQuery={searchQuery}
-                selectedCategory={selectedCategory}
-                onReset={handleResetFilters}
-              />
-            )}
 
-            {/* Demonstration Notice */}
-            <aside className="demo-disclaimer" aria-label="Demo Disclaimer">
-              <span className="disclaimer-icon" aria-hidden="true">ℹ️</span>
-              <p>
-                <strong>Demonstration Fixtures:</strong> Mentors and availability displayed
-                above are sample records for Milestone 3A frontend testing. Live mentor
-                onboarding and database-backed scheduling will be connected in future milestones.
-              </p>
-            </aside>
-          </section>
+              {/* Search and Filters Control Panel */}
+              <div className="discovery-controls">
+                <SearchBar
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  onClearSearch={() => setSearchQuery('')}
+                />
+
+                <CategoryFilter
+                  categories={MOCK_CATEGORIES}
+                  selectedCategory={selectedCategory}
+                  onSelectCategory={setSelectedCategory}
+                />
+              </div>
+
+              {/* Results count & status bar */}
+              <div className="results-status-bar" aria-live="polite">
+                <span className="results-count">
+                  Showing <strong>{filteredMentors.length}</strong> of{' '}
+                  {MOCK_MENTORS.length} mentors
+                  {selectedCategory !== 'All' && (
+                    <span className="active-filter-badge">
+                      Category: {selectedCategory}
+                    </span>
+                  )}
+                  {searchQuery.trim() && (
+                    <span className="active-filter-badge">
+                      Query: &ldquo;{searchQuery.trim()}&rdquo;
+                    </span>
+                  )}
+                </span>
+
+                {isFiltered && (
+                  <button
+                    type="button"
+                    className="clear-all-filters-btn"
+                    onClick={handleResetFilters}
+                  >
+                    Clear all filters
+                  </button>
+                )}
+              </div>
+
+              {/* Mentor Cards Grid or Empty State */}
+              {filteredMentors.length > 0 ? (
+                <div
+                  className="mentors-grid"
+                  role="region"
+                  aria-label="Mentor search results"
+                >
+                  {filteredMentors.map((mentor) => (
+                    <MentorCard
+                      key={mentor.id}
+                      mentor={mentor}
+                      onSelectMentor={(id) => setSelectedMentorId(id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  searchQuery={searchQuery}
+                  selectedCategory={selectedCategory}
+                  onReset={handleResetFilters}
+                />
+              )}
+
+              {/* Demonstration Notice */}
+              <aside className="demo-disclaimer" aria-label="Demo Disclaimer">
+                <span className="disclaimer-icon" aria-hidden="true">ℹ️</span>
+                <p>
+                  <strong>Demonstration Fixtures:</strong> Mentors and availability displayed
+                  above are sample records for Milestone 3A &amp; 3B frontend testing. Live mentor
+                  onboarding and database-backed scheduling will be connected in future milestones.
+                </p>
+              </aside>
+            </section>
+          )
         ) : (
           /* Preserved Project Overview from Milestone 2A */
           <section className="overview-section" aria-labelledby="overview-heading">
@@ -157,14 +185,21 @@ function App() {
                   <div className="pillar-icon">🎯</div>
                   <h3>Mentor Discovery</h3>
                   <p>Filter mentors by department, skills, and topics.</p>
-                  <span className="pillar-tag in-progress">Milestone 3A • Frontend Active</span>
+                  <span className="pillar-tag in-progress">Milestone 3A • Active</span>
+                </div>
+
+                <div className="pillar-card">
+                  <div className="pillar-icon">👤</div>
+                  <h3>Profile Details</h3>
+                  <p>Detailed view of mentor bio, credentials, expertise, and schedule preview.</p>
+                  <span className="pillar-tag in-progress">Milestone 3B • Active</span>
                 </div>
 
                 <div className="pillar-card">
                   <div className="pillar-icon">📅</div>
                   <h3>Appointment Booking</h3>
                   <p>View real-time availability calendars and schedule structured sessions.</p>
-                  <span className="pillar-tag">Planned • Milestone 3B</span>
+                  <span className="pillar-tag">Planned • Milestone 3C</span>
                 </div>
 
                 <div className="pillar-card">

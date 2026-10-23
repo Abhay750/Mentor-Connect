@@ -4,7 +4,7 @@ export default function CategoryFilter({ categories, selectedCategory, onSelectC
       <span id="category-filter-label" className="filter-label">
         Filter by Domain:
       </span>
-      <div 
+      <div
         className="category-pills"
         role="group"
         aria-labelledby="category-filter-label"
