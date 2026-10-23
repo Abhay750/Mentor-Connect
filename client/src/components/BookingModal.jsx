@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { DEMO_TIME_SLOTS } from '../data/mockMentors.js';
+import { createBooking } from '../services/api.js';
 
 // Deterministic helper to get today's date formatted as YYYY-MM-DD
 function getTodayDateString() {
@@ -22,11 +23,13 @@ export default function BookingModal({ mentor, onClose }) {
   const [sessionTopic, setSessionTopic] = useState('');
   const [notes, setNotes] = useState('');
 
-  // UI / validation states
+  // UI / validation / API states
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionResult, setSubmissionResult] = useState(null); // null | 'success' | 'conflict'
   const [submittedData, setSubmittedData] = useState(null);
+  const [serverError, setServerError] = useState(null);
+  const [conflictMessage, setConflictMessage] = useState(null);
 
   // Focus trap and Escape key listener
   useEffect(() => {
@@ -117,7 +120,7 @@ export default function BookingModal({ mentor, onClose }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
 
@@ -126,35 +129,62 @@ export default function BookingModal({ mentor, onClose }) {
     }
 
     setIsSubmitting(true);
+    setServerError(null);
 
     const chosenSlot = DEMO_TIME_SLOTS.find((s) => s.id === selectedSlotId);
+    const timeSlotLabel = chosenSlot ? chosenSlot.label : selectedSlotId;
 
     const payload = {
       mentorId: mentor.id,
-      mentorName: mentor.name,
       studentName: studentName.trim(),
       studentEmail: studentEmail.trim(),
       sessionDate,
-      timeSlotLabel: chosenSlot ? chosenSlot.label : selectedSlotId,
+      timeSlot: timeSlotLabel,
       sessionTopic: sessionTopic.trim(),
       notes: notes.trim(),
-      timestamp: new Date().toISOString()
     };
 
-    setSubmittedData(payload);
-
-    // Deterministic simulation based on chosen fixture slot
-    if (chosenSlot && chosenSlot.isConflictDemo) {
-      setSubmissionResult('conflict');
-    } else {
-      setSubmissionResult('success');
+    try {
+      const response = await createBooking(payload);
+      if (response && response.status === 'success' && response.data) {
+        setSubmittedData(response.data);
+        setSubmissionResult('success');
+      } else {
+        throw new Error('Unexpected server response format');
+      }
+    } catch (err) {
+      if (err.status === 409 || err.code === 'SLOT_UNAVAILABLE') {
+        setConflictMessage(
+          err.message || 'The selected time slot is already booked for this mentor.'
+        );
+        setSubmittedData({
+          timeSlot: timeSlotLabel,
+          sessionDate,
+          mentorName: mentor.name,
+        });
+        setSubmissionResult('conflict');
+      } else if (err.status === 400) {
+        const detailsMsg =
+          Array.isArray(err.details) && err.details.length > 0
+            ? err.details.join('. ')
+            : err.message || 'Invalid booking parameters provided.';
+        setServerError(detailsMsg);
+      } else if (err.status === 404) {
+        setServerError(err.message || 'Mentor not found on server.');
+      } else if (err.code === 'NETWORK_ERROR') {
+        setServerError(
+          err.message || 'Unable to connect to the server. Please check your network connection.'
+        );
+      } else {
+        setServerError(err.message || 'A server error occurred. Please try again later.');
+      }
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setIsSubmitting(false);
   };
 
   const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
+    if (e.target === e.currentTarget && !isSubmitting) {
       onClose();
     }
   };
@@ -187,36 +217,51 @@ export default function BookingModal({ mentor, onClose }) {
             className="modal-close-btn"
             onClick={onClose}
             aria-label="Close booking modal"
+            disabled={isSubmitting}
           >
             ✕
           </button>
         </div>
 
-        {/* Demo Disclaimer Notice */}
+        {/* API Integration Notice */}
         <div className="demo-modal-alert" role="note">
           <span className="demo-alert-icon" aria-hidden="true">ℹ️</span>
           <p>
-            <strong>Milestone 3C-B Simulation:</strong> This is an interactive demo workflow.
-            No network request will be dispatched and no real calendar reservation will be made.
+            <strong>Live Booking Integration:</strong> Session requests are validated and recorded by
+            the Mentor Connect API. Bookings are stored in memory during Milestone 3.
           </p>
         </div>
 
-        {/* Modal Body: Either Form or Simulated Outcome */}
+        {/* Modal Body: Either Form or API Outcome */}
         {submissionResult === 'success' ? (
-          /* Success Simulation View */
+          /* Success Receipt View */
           <div className="outcome-view success-view" role="status" aria-live="polite">
             <div className="outcome-icon-wrapper success-icon">✓</div>
-            <h3 className="outcome-title">Demo Request Submitted</h3>
+            <h3 className="outcome-title">Session Confirmed &amp; Booked</h3>
             <p className="outcome-tagline">
-              Simulated demonstration submission recorded locally in UI state. Not a live reservation.
+              Your appointment request has been confirmed by the API server.
             </p>
 
             <div className="booking-summary-card">
-              <h4 className="summary-title">Summary of Request</h4>
+              <h4 className="summary-title">Booking Confirmation Receipt</h4>
               <dl className="summary-details">
                 <div className="summary-row">
+                  <dt>Booking ID:</dt>
+                  <dd>
+                    <code>{submittedData.bookingId}</code>
+                  </dd>
+                </div>
+                <div className="summary-row">
+                  <dt>Status:</dt>
+                  <dd>
+                    <span style={{ color: '#047857', fontWeight: 700, textTransform: 'capitalize' }}>
+                      {submittedData.status || 'Confirmed'}
+                    </span>
+                  </dd>
+                </div>
+                <div className="summary-row">
                   <dt>Mentor:</dt>
-                  <dd>{submittedData.mentorName}</dd>
+                  <dd>{submittedData.mentorName || mentor.name}</dd>
                 </div>
                 <div className="summary-row">
                   <dt>Student:</dt>
@@ -224,7 +269,7 @@ export default function BookingModal({ mentor, onClose }) {
                 </div>
                 <div className="summary-row">
                   <dt>Date &amp; Time:</dt>
-                  <dd>{submittedData.sessionDate} at {submittedData.timeSlotLabel}</dd>
+                  <dd>{submittedData.sessionDate} at {submittedData.timeSlot}</dd>
                 </div>
                 <div className="summary-row">
                   <dt>Objective:</dt>
@@ -250,27 +295,30 @@ export default function BookingModal({ mentor, onClose }) {
               <button
                 type="button"
                 className="btn-secondary"
-                onClick={() => setSubmissionResult(null)}
+                onClick={() => {
+                  setSubmissionResult(null);
+                  setServerError(null);
+                }}
               >
-                Submit Another Request
+                Book Another Session
               </button>
             </div>
           </div>
         ) : submissionResult === 'conflict' ? (
-          /* Conflict Simulation View */
+          /* Conflict View */
           <div className="outcome-view conflict-view" role="status" aria-live="polite">
             <div className="outcome-icon-wrapper conflict-icon">⚠️</div>
-            <h3 className="outcome-title">Demo Slot Unavailable</h3>
+            <h3 className="outcome-title">Time Slot Unavailable</h3>
             <p className="outcome-tagline">
-              Deterministic Conflict Simulation: The selected time slot is marked as already reserved in this test fixture.
+              {conflictMessage || 'The selected time slot is already booked for this mentor.'}
             </p>
 
             <div className="conflict-details-card">
               <p>
-                <strong>Requested Slot:</strong> {submittedData?.timeSlotLabel} on {submittedData?.sessionDate}
+                <strong>Requested Slot:</strong> {submittedData?.timeSlot} on {submittedData?.sessionDate}
               </p>
               <p className="conflict-hint">
-                In production, backend conflict detection will return HTTP 409 Conflict when a session overlaps with an existing booking.
+                Another student has already reserved this slot. Please select a different time or date.
               </p>
             </div>
 
@@ -278,7 +326,10 @@ export default function BookingModal({ mentor, onClose }) {
               <button
                 type="button"
                 className="btn-primary"
-                onClick={() => setSubmissionResult(null)}
+                onClick={() => {
+                  setSubmissionResult(null);
+                  setServerError(null);
+                }}
               >
                 Choose Another Time Slot
               </button>
@@ -292,8 +343,22 @@ export default function BookingModal({ mentor, onClose }) {
             </div>
           </div>
         ) : (
-          /* Interactive Demo Booking Form */
+          /* Interactive Booking Form */
           <form className="booking-form" onSubmit={handleSubmit} noValidate>
+            {/* Server Error Alert Banner */}
+            {serverError && (
+              <div
+                className="demo-modal-alert"
+                style={{ backgroundColor: '#fef2f2', borderColor: '#fca5a5' }}
+                role="alert"
+              >
+                <span className="demo-alert-icon" aria-hidden="true">⚠️</span>
+                <p style={{ color: '#991b1b', fontWeight: 500 }}>
+                  <strong>Booking Error:</strong> {serverError}
+                </p>
+              </div>
+            )}
+
             {/* Student Name */}
             <div className="form-group">
               <label htmlFor="student-name" className="form-label">
@@ -309,9 +374,11 @@ export default function BookingModal({ mentor, onClose }) {
                 onChange={(e) => {
                   setStudentName(e.target.value);
                   if (errors.studentName) setErrors({ ...errors, studentName: null });
+                  if (serverError) setServerError(null);
                 }}
                 aria-invalid={!!errors.studentName}
                 aria-describedby={errors.studentName ? 'student-name-error' : undefined}
+                disabled={isSubmitting}
                 required
               />
               {errors.studentName && (
@@ -335,9 +402,11 @@ export default function BookingModal({ mentor, onClose }) {
                 onChange={(e) => {
                   setStudentEmail(e.target.value);
                   if (errors.studentEmail) setErrors({ ...errors, studentEmail: null });
+                  if (serverError) setServerError(null);
                 }}
                 aria-invalid={!!errors.studentEmail}
                 aria-describedby={errors.studentEmail ? 'student-email-error' : undefined}
+                disabled={isSubmitting}
                 required
               />
               {errors.studentEmail && (
@@ -362,9 +431,11 @@ export default function BookingModal({ mentor, onClose }) {
                   onChange={(e) => {
                     setSessionDate(e.target.value);
                     if (errors.sessionDate) setErrors({ ...errors, sessionDate: null });
+                    if (serverError) setServerError(null);
                   }}
                   aria-invalid={!!errors.sessionDate}
                   aria-describedby={errors.sessionDate ? 'session-date-error' : undefined}
+                  disabled={isSubmitting}
                   required
                 />
                 {errors.sessionDate && (
@@ -385,9 +456,11 @@ export default function BookingModal({ mentor, onClose }) {
                   onChange={(e) => {
                     setSelectedSlotId(e.target.value);
                     if (errors.selectedSlotId) setErrors({ ...errors, selectedSlotId: null });
+                    if (serverError) setServerError(null);
                   }}
                   aria-invalid={!!errors.selectedSlotId}
                   aria-describedby={errors.selectedSlotId ? 'demo-time-slot-error' : 'slot-hint'}
+                  disabled={isSubmitting}
                   required
                 >
                   <option value="">-- Select an illustrative slot --</option>
@@ -403,7 +476,7 @@ export default function BookingModal({ mentor, onClose }) {
                   </p>
                 ) : (
                   <p id="slot-hint" className="field-hint">
-                    Slot 4 (05:30 PM) is configured to simulate conflict handling.
+                    Select a consultation time window with {mentor.name}.
                   </p>
                 )}
               </div>
@@ -429,9 +502,11 @@ export default function BookingModal({ mentor, onClose }) {
                 onChange={(e) => {
                   setSessionTopic(e.target.value);
                   if (errors.sessionTopic) setErrors({ ...errors, sessionTopic: null });
+                  if (serverError) setServerError(null);
                 }}
                 aria-invalid={!!errors.sessionTopic}
                 aria-describedby={errors.sessionTopic ? 'session-topic-error' : undefined}
+                disabled={isSubmitting}
                 required
               />
               {errors.sessionTopic && (
@@ -461,9 +536,11 @@ export default function BookingModal({ mentor, onClose }) {
                 onChange={(e) => {
                   setNotes(e.target.value);
                   if (errors.notes) setErrors({ ...errors, notes: null });
+                  if (serverError) setServerError(null);
                 }}
                 aria-invalid={!!errors.notes}
                 aria-describedby={errors.notes ? 'session-notes-error' : undefined}
+                disabled={isSubmitting}
               />
               {errors.notes && (
                 <p id="session-notes-error" className="field-error" role="alert">
@@ -487,7 +564,7 @@ export default function BookingModal({ mentor, onClose }) {
                 className="btn-primary"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Submitting...' : 'Submit Demo Request'}
+                {isSubmitting ? 'Submitting...' : 'Submit Booking Request'}
               </button>
             </div>
           </form>
