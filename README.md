@@ -120,8 +120,33 @@ Undergraduate students frequently face challenges finding timely, personalized a
    npm run build
    ```
 
-### Backend Setup
-> **Pending:** Backend APIs and services will be initialized in Milestone 2B. Setup and run commands will be added once backend scaffolding is created.
+### Backend Setup (Verified)
+1. Navigate to the server directory:
+   ```bash
+   cd server
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. (Optional) Configure environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+   *Default port is `5000` if not configured.*
+4. Start the server:
+   - **Development mode (with auto-reload):**
+     ```bash
+     npm run dev
+     ```
+   - **Production mode:**
+     ```bash
+     npm start
+     ```
+5. Verify health check endpoint:
+   ```bash
+   curl http://localhost:5000/api/health
+   ```
 
 ---
 
